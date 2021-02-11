@@ -1,0 +1,36 @@
+---
+title: "PCA"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, comment='', message = FALSE, error = TRUE, 
+                      warning=FALSE, fig.width=8, booktabs = T, longtable = T, knitr.kable.NA = "",  knitr.kable.linesep = '', longtable = T) 
+```
+
+
+```{r}
+# Get selected data
+df <- params$data
+eval0 <- FALSE
+
+tryCatch({
+  df <- df[,params$vars1,drop=FALSE]
+  df2 <- df
+  eval0 <- TRUE
+}, error=function(e) {
+  stop(safeError("Variables cannot be selected. "))
+})
+
+# Possible error reason
+if (length(setdiff(params$vars1,colnames(df))) >0) {
+  cat("Please try other column names for the following columns: ")
+  equal <- intersect(colnames(df),params$vars1)
+  kable(setdiff(params$vars1,equal),col.names = "Column")
+}
+```
+
+
+```{r include=FALSE}
+pca <-  PCA(df)
+Investigate(pca, document="pdf_document", keepRmd=TRUE, openFile=FALSE)
+```
