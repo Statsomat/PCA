@@ -10,9 +10,7 @@ library(data.table)
 library(readr)
 library(shinydisconnect)
 
-library(knitr) 
-library(FactoMineR)
-library(FactoInvestigate)
-
 source("chooser.R")
 source("helpers/Functions.R")
+source("helpers/Function_Investigate2.R")
+source("helpers/Function_createRmd2.R")

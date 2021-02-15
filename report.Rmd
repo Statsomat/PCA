@@ -1,6 +1,6 @@
 ---
 title: "Principal Components Analysis"
-author: "Statsomat.com"
+author: "Fran\\c{c}ois Husson and Statsomat.com"
 date: "`r format(Sys.time(), '%d %B %Y')`"
 output:
   pdf_document:
@@ -29,9 +29,6 @@ header-includes:
 
 
 ```{r child = 'report_kernel.Rmd', eval=TRUE}
-```
-
-```{r child = 'Investigate.Rmd', eval=TRUE}
 ```
 
 

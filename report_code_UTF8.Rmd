@@ -1,5 +1,5 @@
 ---
-title: "Confirmatory Factor Analysis"
+title: "Principal Components Analysis"
 author: "Statsomat.com"
 date: "`r format(Sys.time(), '%d %B %Y')`"
 output:

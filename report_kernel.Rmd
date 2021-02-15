@@ -9,9 +9,32 @@ knitr::opts_chunk$set(echo = FALSE, comment='', message = FALSE, error = TRUE,
 
 
 ```{r}
+# Initialize next computations
+library(knitr) 
+library(kableExtra)
+library(FactoMineR)
+library(FactoInvestigate)
+library(corrplot)
+library(factoextra)
+library(DDoutlier)
+library(energy)
+library(rrcov)
+library(methods)
+library(parallel)
+library(graphics)
+library(ggplot2)
+
+eval0 <- FALSE
+eval <- FALSE
+eval2 <- FALSE
+eval3 <- FALSE
+eval4 <- FALSE
+eval5 <- FALSE
+```
+
+```{r}
 # Get selected data
 df <- params$data
-eval0 <- FALSE
 
 tryCatch({
   df <- df[,params$vars1,drop=FALSE]
@@ -30,7 +53,326 @@ if (length(setdiff(params$vars1,colnames(df))) >0) {
 ```
 
 
-```{r include=FALSE}
-pca <-  PCA(df)
-Investigate(pca, document="pdf_document", keepRmd=TRUE, openFile=FALSE)
+
+```{r, eval=eval0}
+# Data preparation
+
+tryCatch({
+
+# Drop columns if all observations are missing 
+col_names_missing <- sapply(df, function(col) all(is.na(col)))
+df[ ,col_names_missing] <- list(NULL)
+df_list <- df 
+
+
+# Drop empty rows
+rowsums <- data.frame(sapply(df,is.na))
+if (length(which(rowSums(rowsums) == dim(df)[2])) != 0L){
+  rows_drop <- (which(rowSums(rowsums) == dim(df)[2]))
+  length_non_complete <- length(which(rowSums(rowsums) == dim(df)[2]))
+  df <- df[-rows_drop, ,drop=FALSE]
+}
+
+# Convert logical variables to character
+cols_logical <- sapply(df, function(col) is.logical(col))
+df[ ,cols_logical] <- sapply(df[ ,cols_logical], as.character)
+
+# Convert numerical variables with less than 7 unique values to character (missing values omitted)
+col_names_numeric <- sapply(df, function(col) length(unique(na.omit(col))) < 7L & is.numeric(col))
+df[ ,col_names_numeric] <- sapply(df[ ,col_names_numeric], as.character)
+
+# Extract numerical variables 
+df_num <- df[which(sapply(df, is.numeric) == 1L)]
+
+# Extract approximate continuous variables
+if (ncol(df_num)>0){
+
+  rateunique_df <- sapply(df_num, function(col) continuous(col))
+  cols_continuous <- names(which(rateunique_df == TRUE))
+  df_cont <- df_num[,rateunique_df,drop=FALSE] # numeric, continuous resp. assumption fulfilled 
+  
+} else {rateunique_df<-FALSE}
+
+# Extract ordinal columns 
+cols_ordinal <- names(which(rateunique_df == FALSE))
+
+# Extract binary character variables 
+cols_binary <- sapply(df, function(col) is.character(col) & length(unique(na.omit(col))) == 2)
+cols_binary_names <- names(which(cols_binary == TRUE))
+df_binary <- df[,cols_binary,drop=FALSE]
+
+# Make dummy variables for the character variables with more than 2 levels 
+cols_dummy <- sapply(df, function(col) is.character(col) & length(unique(na.omit(col))) > 2)
+df_dummy <-  df[,cols_dummy,drop=FALSE]
+if (ncol(df_dummy)>0) {
+  dummies <- fastDummies::dummy_cols(df_dummy, remove_first_dummy = TRUE, ignore_na=TRUE)
+  dummies2 <- dummies[,-cols_dummy,drop=FALSE]
+  df_binary <- merge(df_binary,dummies2,by="row.names")
+} 
+
+# Put together 
+df_work <- merge(df_num,df_binary,by="row.names")
+df_work$Row.names <- NULL
+df_work$Row.names.y <-NULL
+
+# Initialize next computations
+eval <- TRUE
+
+}, error=function(e) {
+  
+  stop(safeError("Dataset cannot be prepared. Please check the data for consistency."))
+  
+}
+
+)
+
 ```
+
+
+```{r, results="asis", eval=eval}
+# Chunk with first page of basic information
+
+cat("\n# Basic Information", fill=TRUE)
+cat("Automatic statistics for the file:", fill=TRUE)
+dataname <- params$filename[1]
+knitr::kable(dataname, col.names = "File", linesep = '', longtable = T) %>%
+    kable_styling(position = "center", full_width = FALSE, latex_options = c("HOLD_position","repeat_header"))
+
+cat("Your selection for the encoding:", fill=TRUE)
+if (params$fencoding=="unknown"){
+  cat("Auto")
+} else {cat("UTF-8")}
+cat("\\newline",fill=TRUE) 
+
+cat("Your selection for the decimal character:", fill=TRUE)
+if (params$decimal=="auto"){
+  cat("Auto")
+} else {cat(params$decimal)}
+cat("\\newline",fill=TRUE) 
+  
+cat("Observations (rows with at least one non-missing value): ", fill=TRUE)
+cat(dim(df)[1])
+cat("\\newline",fill=TRUE) 
+
+# Missing rows
+if (exists("length_non_complete")){
+  cat("Number of rows that are dropped because they contain no values (all values are missing):", length_non_complete)
+  cat("\\newline",fill=TRUE) 
+}
+
+cat("Variables (columns with at least one non-missing value): ", fill=TRUE)
+cat(dim(df_list)[2])
+cat("\\newline",fill=TRUE) 
+
+
+# Missing columns
+if (exists("col_names_missing")){
+  if (sum(col_names_missing) != 0L){
+    cat("Number of columns that are dropped because they contain no values (all values are missing):", sum(col_names_missing), fill=TRUE)
+    cat("\\newline",fill=TRUE) 
+  } 
+}
+
+
+if (exists("df_cont")){
+  cat("Variables considered continuous: ", fill=TRUE)
+    if (ncol(df_cont)>0){
+      cat(ncol(df_cont),fill=TRUE)
+      knitr::kable(cols_continuous, col.names = "Variables considered continuous", linesep = '', longtable = T) %>%
+        kable_styling(position = "center", full_width = FALSE, latex_options = c("HOLD_position","repeat_header"))
+    } else {
+      cat("0", fill=TRUE)
+      cat("\\newline",fill=TRUE) 
+    }
+}
+
+
+if (exists("df_num")){
+  if (ncol(df_num)>0){
+    if (sum(rateunique_df==FALSE)>0){
+      cat("Numerical variables considered binary or ordinal: ", fill=TRUE)
+      cat(sum(rateunique_df==FALSE),fill=TRUE)
+      knitr::kable(cols_ordinal, col.names = "Numerical variables considered binary or ordinal", linesep = '', longtable = T) %>%
+        kable_styling(position = "center", full_width = FALSE, latex_options = c("HOLD_position","repeat_header"))
+    } 
+  }
+}
+
+
+
+if (exists("cols_binary")){
+  if (sum(cols_binary)>0){
+    cat("Character variables considered binary: ", fill=TRUE)
+    cat(sum(cols_binary),fill=TRUE)
+    knitr::kable(names(which(cols_binary==TRUE)), col.names = "Character variables considered binary", linesep = '', longtable = T) %>%
+      kable_styling(position = "center", full_width = FALSE, latex_options = c("HOLD_position","repeat_header"))
+  } 
+}
+
+
+
+if (exists("cols_dummy")){
+  if (sum(cols_dummy)>0){
+    cat("Character variables considered nominal and transformed to binary: ", fill=TRUE)
+    cat(sum(cols_dummy),fill=TRUE)
+    knitr::kable(colnames(dummies2), col.names = "Binary dummies for nominal variables", linesep = '', longtable = T) %>%
+      kable_styling(position = "center", full_width = FALSE, latex_options = c("HOLD_position","repeat_header"))
+  } 
+}
+```
+
+
+```{r, results="asis", eval=eval}
+# Numeric falsly to char? 
+check_reading <- function(col){
+  numeric <- !is.na(as.numeric(col))
+  return(sum(numeric)/sum(!is.na(col)))
+}
+
+df_char2 <- df2[which(sapply(df2, is.character) == 1L)]
+numeric_percent <- sapply(df_char2, function(col) check_reading(col))
+
+if (length(numeric_percent[(numeric_percent>0.9)]) != 0L){
+  cat("**Warning: More than 90% of the values of these columns could be treated as numeric. Nevertheless, because of some values or the selected decimal character, the columns must be treated as discrete. Are all the values plausible? Please check the data once more before uploading! Column(s):**", names(numeric_percent[(numeric_percent>0.9)]), fill=TRUE)
+   cat("\\newline",fill=TRUE) 
+}
+
+```
+
+
+```{r, results="asis", dev="cairo_pdf", eval=eval}
+# Continuous variables?
+if (exists("df_cont")){
+  if (ncol(df_cont) < ncol(df)){
+    cat("**Error: Some selected variables are not considered to be continuous. PCA is not a suitable method. For support contact: support@statsomat.com**")
+    cat("\\newline",fill=TRUE) 
+  } else {
+    eval2 <- TRUE
+  }
+} else {
+  cat("**Error:  Some selected variables are not considered to be continuous. PCA is not a suitable method. For support contact: support@statsomat.com**")
+  cat("\\newline",fill=TRUE) 
+}
+
+```
+
+
+```{r, results="asis", dev="cairo_pdf", eval=eval2}
+# Missings  > 5%
+complete_rate <- sapply(df_cont, function(col) 1-(sum(is.na(col)) / dim(df)[1])) 
+if (length(which(complete_rate < 0.95)) != 0L){
+  cat("**Error: Execution stop because of limit on missing values. There exist continuous variables with more than 5% missing values. This app allows a max. of 5% missing values per observed variable. Please reconsider your data before using this app. **")
+  miss_var <- names(which(complete_rate < 0.95)) 
+  eval2 <- FALSE
+  knitr::kable(miss_var, col.names = "Variable(s) with missing values", linesep = '', longtable = T) %>%
+    kable_styling(position = "center", full_width = FALSE, latex_options = c("HOLD_position","repeat_header"))
+}
+``` 
+
+
+```{r, results="asis", dev="cairo_pdf", eval=eval2}
+# Missings in continuous <=5% 
+indic_missings <- FALSE
+if (length(which(complete_rate < 1 & complete_rate > 0.95)) != 0L){
+  cat("Missings: There exist variable(s) with <5% missing values. We assume a random missing pattern and apply a missing values imputation technique. TODO")
+}
+```   
+
+
+```{r, results="asis", dev="cairo_pdf", eval=eval2}
+# Outliers
+try({
+  if (length(knnoutlier(df_cont))>0){
+    cat("Outliers: We suspect outliers in the data. If observations are erroneous, you could drop them and restart the app. Outliers may affect negatively the execution or the results of the PCA. These are the suspected row numbers: ")
+    outliers_rows <- df_cont[knnoutlier(df_cont),]
+    knitr::kable(outliers_rows, linesep = '', longtable = T, caption="Row(s) With Suspected Outliers", digits=1) %>%
+      kable_styling(position = "center", full_width = FALSE, latex_options = c("HOLD_position","repeat_header"))
+  } else {
+    cat("Outliers: We cannot identify any statistically significant outliers. ", fill=TRUE)
+    cat("\\newline",fill=TRUE) 
+  }
+}, silent=TRUE)
+
+# Normality for complete and outlier deleted dataset 
+tryCatch({
+  df_norm <- df_cont 
+  if (length(knnoutlier(df_norm))>0){
+    outliers_rows <- as.integer(row.names(outliers_rows))
+    df_norm <- df_norm[-outliers_rows,]
+  } 
+  df_norm <- df_norm[complete.cases(df_norm),]
+  qqcors <- sapply(df_norm,normality)
+  pnorm <- mvnorm.test(df_norm, 100)$p.value
+  if (sum(!qqcors)==0 || pnorm > 0.01){
+    eval3 <- TRUE
+    cat("Normality: The continuous variables are approximately (multivariate) normally distributed. ", fill=TRUE)
+    cat("\\newline",fill=TRUE) 
+  } else {
+    cat("**Error: We cannot assume an approximately (multivariate) normal distribution of the data, which is required by this app. You could try to apply suitable transformations to the data before using this app. For (chargeable) support contact: support@statsomat.com**")
+  }
+}, 
+warning=function(w){
+  cat("Warning: A multivariate normality check of the data could not be fulfilled. In the sequel we assume that the data is approximately multivariate normally distributed.")
+  cat("\\newline",fill=TRUE) 
+  cat("Estimation Method: Maximum Likelihood. ", fill=TRUE)
+  eval3 <- TRUE
+}
+)
+```  
+
+```{r include=FALSE, eval=eval3}
+pca <-  PCA(df)
+Investigate2(pca, document="pdf_document", keepRmd=TRUE, openFile=FALSE, out.selec=FALSE)
+```
+
+```{r child = 'Investigate.Rmd', eval=eval3}
+```
+
+```{r, results="asis", eval=eval3}
+cat("\n## Eigenvalues and proportion explained", fill=TRUE)
+```
+
+```{r, eval=eval3}
+eig.val <- get_eigenvalue(pca)
+eig.val
+```
+
+```{r, results="asis", eval=eval3}
+cat("\n## Screeplot", fill=TRUE)
+```
+
+```{r, eval=eval3}
+fviz_eig(pca, addlabels = TRUE, ylim = c(0, 50))
+```
+
+```{r, results="asis", eval=eval3}
+cat("\n# Correlations variables - dimensions", fill=TRUE)
+```
+
+```{r, eval=eval3}
+pca$var$cor[,1:2]
+```
+
+```{r, results="asis", eval=eval3}
+cat("\n# Contribution variables - dimensions", fill=TRUE)
+```
+
+```{r, eval=eval3}
+corrplot(pca$var$contrib, is.corr=FALSE)
+```
+
+```{r, results="asis", eval=eval3}
+cat("\n# Quality of representation", fill=TRUE)
+corrplot(pca$var$cos2, is.corr=FALSE)
+```
+
+```{r, results="asis", eval=eval3}
+cat("\n# Total cos2 of variables on Dim.1 and Dim.2", fill=TRUE)
+```
+
+```{r, eval=eval3}
+fviz_cos2(pca, choice = "var", axes = 1:2)
+```
+
+
+
