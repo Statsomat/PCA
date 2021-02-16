@@ -325,7 +325,8 @@ pca <-  PCA(df)
 Investigate2(pca, document="pdf_document", keepRmd=TRUE, openFile=FALSE, out.selec=FALSE)
 ```
 
-```{r child = 'Investigate.Rmd', eval=eval3}
+```{r, results="asis", eval=eval3}
+cat("\n# Outputs", fill=TRUE)
 ```
 
 ```{r, results="asis", eval=eval3}
@@ -339,40 +340,72 @@ eig.val
 
 ```{r, results="asis", eval=eval3}
 cat("\n## Screeplot", fill=TRUE)
-```
-
-```{r, eval=eval3}
 fviz_eig(pca, addlabels = TRUE, ylim = c(0, 50))
 ```
 
+
 ```{r, results="asis", eval=eval3}
-cat("\n# Correlations variables - dimensions", fill=TRUE)
+cat("\n## Observations", fill=TRUE)
 ```
 
-```{r, eval=eval3}
+```{r, results="asis", eval=eval3}
+cat("\n### Scores (Head)", fill=TRUE)
+kable(head(pca$ind$coord))
+```
+
+```{r, results="asis", eval=eval3}
+cat("\n### Score Plots", fill=TRUE)
+fviz_pca_ind(pca, axes = c(1, 2))
+fviz_pca_ind(pca, axes = c(1, 3))
+fviz_pca_ind(pca, axes = c(2, 3))
+```
+
+```{r, results="asis", eval=eval3}
+cat("\n### Clustering", fill=TRUE)
+```
+
+```{r, results="asis", eval=eval3}
+cat("\n## Variables", fill=TRUE)
+```
+
+```{r, results="asis", eval=eval3}
+cat("\n### Loadings", fill=TRUE)
+cat("Loadings on principal components", fill=TRUE)
+```
+
+```{r, results="asis", eval=eval3}
+cat("\n### Correlations", fill=TRUE)
+cat("Correlation between variables and principal components", fill=TRUE)
 pca$var$cor[,1:2]
 ```
 
 ```{r, results="asis", eval=eval3}
-cat("\n# Contribution variables - dimensions", fill=TRUE)
-```
-
-```{r, eval=eval3}
+cat("\n### Contribution", fill=TRUE)
+cat("Contribution of variables on principal components", fill=TRUE)
 corrplot(pca$var$contrib, is.corr=FALSE)
 ```
 
 ```{r, results="asis", eval=eval3}
-cat("\n# Quality of representation", fill=TRUE)
+cat("\n### Cosine of Angles", fill=TRUE)
 corrplot(pca$var$cos2, is.corr=FALSE)
 ```
 
 ```{r, results="asis", eval=eval3}
-cat("\n# Total cos2 of variables on Dim.1 and Dim.2", fill=TRUE)
+cat("\n### Loading Plot", fill=TRUE)
 ```
 
-```{r, eval=eval3}
-fviz_cos2(pca, choice = "var", axes = 1:2)
+```{r, results="asis", eval=eval3}
+cat("\n### Correlation Plot", fill=TRUE)
+cat("Variables within correlation circle and cosine of angle", fill=TRUE)
+fviz_pca_var(res, col.var = "cos2", 
+             gradient.cols = c("yellow", "green", "blue"),
+             ggtheme = theme_minimal())
 ```
 
+```{r, results="asis", eval=eval3}
+cat("\n# Interpretation by FactoInvestigate package", fill=TRUE)
+```
 
+```{r child = 'Investigate.Rmd', eval=eval3}
+```
 

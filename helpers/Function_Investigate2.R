@@ -71,7 +71,6 @@ Investigate2 <-
     
     param = getParam(res)
     cat("-- ", gettext("creation of the .Rmd file",domain="R-FactoInvestigate"), " (", gettext("time spent",domain="R-FactoInvestigate"), " : ", round(as.numeric(difftime(Sys.time(), t, units = "secs")), 2), "s) --\n\n", sep = "")
-    ## Next line adapted 
     createRmd2(res, analyse=analyse, file, document)
     writeRmd(paste0("library(FactoMineR)\nload('", as.character(getwd()),"/Workspace.RData')"), file = file, start = TRUE, stop = TRUE, options = "r, echo = FALSE")
     
@@ -82,8 +81,7 @@ Investigate2 <-
       cat("-- ", gettext("analysis of the inertia",domain="R-FactoInvestigate"), " (", gettext("time spent",domain="R-FactoInvestigate"), " : ", round(as.numeric(difftime(Sys.time(), t, units = "secs")), 2), "s) --\n", sep = "")
       compteur = compteur + 1
       
-      ## Next line adapted
-      writeRmd("### ", compteur, " ", gettext("Inertia distribution",domain="R-FactoInvestigate"), file = file, sep = "")
+      writeRmd("## ", compteur, ". ", gettext("Inertia distribution",domain="R-FactoInvestigate"), file = file, sep = "")
       
       ncp = inertiaDistrib(res, file = file, ncp = ncp, time = time, figure.title = paste("Figure", compteur), graph = FALSE, options = options)
       cat(ncp, gettext("component(s) carrying information",domain="R-FactoInvestigate"), ":", gettext("total inertia of",domain="R-FactoInvestigate"), paste(round(res$eig[ncp, 3], 1), "%", sep = ""), "\n\n")
@@ -140,7 +138,7 @@ Investigate2 <-
         compteur = compteur + 1
         if(ncp >= dim[2]) {
           cat(gettext("plane",domain="R-FactoInvestigate"), paste(dim[1], ":", dim[2], sep = ""), "\n")
-          writeRmd("### ", compteur, ". ", gettext("Description of the plane",domain="R-FactoInvestigate"), " ", dim[1], ":", dim[2], file = file, sep = "")
+          writeRmd("## ", compteur, ". ", gettext("Description of the plane",domain="R-FactoInvestigate"), " ", dim[1], ":", dim[2], file = file, sep = "")
         } else {
           cat(gettext("dim.",domain="R-FactoInvestigate"), dim[1], "\n")
           writeRmd("### ", compteur, ". ", gettext("Description of the dimension",domain="R-FactoInvestigate"), " ", dim[1], file = file, sep = "")
@@ -165,7 +163,7 @@ Investigate2 <-
         cat("-- ", gettext("classification",domain="R-FactoInvestigate"), " (", gettext("time spent",domain="R-FactoInvestigate"), " : ", round(as.numeric(difftime(Sys.time(), t, units = "secs")), 2), "s) --\n", sep = "")
         if(sum(log(dimActive(res))^2) < 83.38) {
           compteur = compteur + 1
-          writeRmd("### ", compteur,". Classification", end = "\n\n", file = file, sep = "")
+          writeRmd("## ", compteur,". Classification", end = "\n\n", file = file, sep = "")
           
           if(analyse %in% c("CA", "CaGalt")) {
             res.hcpc = classif(res, file = file, nclust = nclust, selec = Rselec, coef = Rcoef, nmax = nmax, mmax = mmax, figure.title = paste("Figure", compteur), graph = FALSE, options = options)
@@ -175,7 +173,7 @@ Investigate2 <-
           cat(length(levels(res.hcpc$data.clust$clust)), gettext("clusters",domain="R-FactoInvestigate"), "\n\n")
         } else {
           compteur = compteur + 1
-          writeRmd("### ", compteur,". Classification", end = "\n\n", file = file, sep = "")
+          writeRmd("## ", compteur,". Classification", end = "\n\n", file = file, sep = "")
           
           cat(gettext("dataset too heavy",domain="R-FactoInvestigate"), "\n\n")
           writeRmd(gettext("The dataset is too large to perform the classification",domain="R-FactoInvestigate"), end = ".\n", file = file)

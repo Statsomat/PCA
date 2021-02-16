@@ -143,6 +143,7 @@ createRmd2 <-
                       paste("\n  ", document, ": default", sep = "", collapse = ""), sep = "", file = file, end = "\n---\n")
            })
     
-    writeRmd(".", file = file)
-    writeRmd("\n- - -\n", file = file) # saut de ligne pour separation dans le compte-rendu
+    ## Drop next 2 line
+    # writeRmd(".", file = file)
+     writeRmd("\n- - -\n", file = file) # saut de ligne pour separation dans le compte-rendu
   }
