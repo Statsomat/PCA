@@ -1,6 +1,6 @@
 ---
 title: "Principal Components Analysis"
-author: "Fran\\c{c}ois Husson and Statsomat.com"
+author: "Statsomat.com"
 date: "`r format(Sys.time(), '%d %B %Y')`"
 output:
   pdf_document:
