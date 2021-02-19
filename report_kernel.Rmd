@@ -4,7 +4,7 @@ title: "PCA"
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, comment='', message = FALSE, error = TRUE, 
-                      warning=FALSE, fig.width=8, booktabs = T, longtable = T, knitr.kable.NA = "",  knitr.kable.linesep = '', longtable = T) 
+                      warning=FALSE, booktabs = T, longtable = T, knitr.kable.NA = "",  knitr.kable.linesep = '', longtable = T) 
 ```
 
 
@@ -23,6 +23,7 @@ library(methods)
 library(parallel)
 library(graphics)
 library(ggplot2)
+library(gridExtra)
 
 eval0 <- FALSE
 eval <- FALSE
@@ -348,30 +349,39 @@ cat("Equivalent to: Squared cosine of angle between variables and principal comp
 kable(pca$var$cos2, digits = 3)
 ```
 
-
-```{r, results="asis", eval=eval2}
-cat("\n### Standardized Loadings Plots (Coordinates)", fill=TRUE)
-cat("Coordinates given by the correlations. Cos2 is variance explained. ", fill=TRUE)
+```{r, results="asis", eval=eval2, dev="cairo_pdf", fig.height=18, fig.width=15}
+cat("\n### Standardized Loadings Plots (Dimenstions 1-2)", fill=TRUE)
+cat("Variables coloured by variance explained (cos2)", fill=TRUE)
 cat("\\newline", fill=TRUE)
 fviz_pca_var(pca, col.var = "cos2", axes = c(1,2), 
-             gradient.cols = c("#ff9900", "#2fa42d", "#396e9f"),
-             ggtheme = theme_minimal())
-fviz_pca_var(pca, col.var = "cos2", axes = c(1,3), 
-             gradient.cols = c("#ff9900", "#2fa42d", "#396e9f"),
-             ggtheme = theme_minimal())
-fviz_pca_var(pca, col.var = "cos2", axes = c(2,3), 
-             gradient.cols = c("#ff9900", "#2fa42d", "#396e9f"),
-             ggtheme = theme_minimal())
+             gradient.cols = c("#ff9900", "#2fa42d", "#396e9f"), title="", ggtheme=theme_minimal(base_size = 22))
+```
+
+```{r, results="asis", eval=eval2, dev="cairo_pdf", fig.height=18, fig.width=15}
+cat("\n### Standardized Loadings Plots (Dimensions 1-5)", fill=TRUE)
+for (i in 1:5){
+  for (j in 1:5){
+  nam <- paste0(paste0("plot",i),j)
+  plot <- fviz_pca_var(pca, axes = c(i,j), title="", ggtheme=theme_minimal(base_size = 8))
+  assign(nam, plot)
+  }
+}
+# PLots arranged
+gridExtra::grid.arrange(grobs = list(plot12,plot13,plot23,plot14,plot24,plot34,plot15,plot25,plot35,plot45), 
+                      nrow=4, ncol=3, widths = unit(c(10, 10, 10), "cm"), padding = unit(0.2, "line"))
 ```
 
 ```{r, results="asis", eval=eval2}
 cat("\n### Standardized Loadings Plot (Matrix)", fill=TRUE)
-corrplot(pca$var$cor, is.corr=FALSE)
+col_statsomat <- colorRampPalette(c("#ff9900", "#2fa42d", "#396e9f"))
+corrplot(pca$var$cor, is.corr=FALSE, tl.col="#396e9f", col=col_statsomat(10), number.cex = 0.2)
 ```
 
 ```{r, results="asis", eval=eval2}
 cat("\n### Squared Standardized Loadings Plot (Matrix)", fill=TRUE)
-corrplot(pca$var$cos2, is.corr=FALSE)
+cat("Variance explained (cos2)", fill=TRUE)
+cat("\\newline", fill=TRUE)
+corrplot(pca$var$cos2, is.corr=FALSE, method="color", tl.col="#396e9f", number.cex = 0.2)
 ```
 
 ```{r, results="asis", eval=eval2}
@@ -384,18 +394,32 @@ kable(head(pca$ind$coord))
 ```
 
 ```{r, results="asis", eval=eval2}
-cat("\n### Score Plots", fill=TRUE)
-fviz_pca_ind(pca, axes = c(1, 2))
-fviz_pca_ind(pca, axes = c(1, 3))
-fviz_pca_ind(pca, axes = c(2, 3))
+cat("\n### Score Plot (Dimensions 1-2)", fill=TRUE)
+fviz_pca_ind(pca, axes = c(1,2), title="", col.ind = "#396e9f", ggtheme=theme_minimal(base_size = 11))
+```
+
+
+```{r, results="asis", eval=eval2, fig.height=18, fig.width=15}
+cat("\n### Score Plots (Dimensions 1-5)", fill=TRUE)
+for (i in 1:5){
+  for (j in 1:5){
+  nam <- paste0(paste0("plot",i),j)
+  plot <- fviz_pca_ind(pca, axes = c(i,j), col.ind = "#396e9f", title="", ggtheme=theme_minimal(base_size = 8))
+  assign(nam, plot)
+  }
+}
+# PLots arranged
+gridExtra::grid.arrange(grobs = list(plot12,plot13,plot23,plot14,plot24,plot34,plot15,plot25,plot35,plot45), 
+                      nrow=4, ncol=3, widths = unit(c(10, 10, 10), "cm"), padding = unit(0.2, "line"))
 ```
 
 ```{r, results="asis", eval=eval2}
-cat("\n### Clusters", fill=TRUE)
-```
-
-```{r, results="asis", eval=eval2}
-cat("\n### Biplots", fill=TRUE)
+cat("\n### Biplot Dimensions 1-2", fill=TRUE)
+cat("An observation that is on the same side of a given variable has a high value for this variable")
+cat("\\newline", fill=TRUE)
+cat("an individual that is on the opposite side of a given variable has a low value for this variable.")
+cat("\\newline", fill=TRUE)
+fviz_pca_biplot(pca, col.var = "#ff9900", col.ind = "#396e9f", title="")
 ```
 
 ```{r, results="asis", eval=eval2}
