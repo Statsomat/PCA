@@ -203,12 +203,6 @@ function(input, output, session) {
       session$close()
     }
     
-    if (sum(grepl("_",input$selection1$right))>0){
-      showNotification("Error: Underscores in column names currently not supported. ", duration=40)
-      Sys.sleep(5)
-      session$close()
-    }
-    
     
     if (length(input$selection1$right) > 25 ){
       showNotification("Maximum number of columns exceeded. For more contact: support@statsomat.com", duration=30)
