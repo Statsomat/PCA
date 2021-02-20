@@ -297,8 +297,12 @@ try({
 
 ```  
 
+```{r, results="asis", eval=eval2}
+cat("**Warning: Depending on the distribution of the data and the purpose of the analysis, the Principal Components Analysis (PCA) may not be the optimal dimensionality reduction method. Consider also other dimensionality reduction methods i.e. kernel PCA or Independent Component Analysis (ICA) in comparison to the results delivered by the PCA. For support contact support@statsomat.com **", fill=TRUE)
+```
+
 ```{r include=FALSE, eval=eval2}
-pca <-  PCA(df, scale.unit = TRUE)
+pca <-  PCA(df, scale.unit = FALSE)
 Investigate2(pca, document="pdf_document", keepRmd=TRUE, openFile=FALSE, out.selec=FALSE)
 ```
 

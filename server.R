@@ -210,6 +210,12 @@ function(input, output, session) {
       session$close()
     }
     
+    if (length(input$selection1$left) < 2 ){
+      showNotification("Error: Minimum 2 columns required. ", duration=30)
+      Sys.sleep(5)
+      session$close()
+    }
+    
   })
   
 
