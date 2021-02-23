@@ -28,9 +28,7 @@ library(gridExtra)
 eval0 <- FALSE
 eval <- FALSE
 eval2 <- FALSE
-eval2 <- FALSE
-eval4 <- FALSE
-eval5 <- FALSE
+evaldim3 <- FALSE
 ```
 
 ```{r}
@@ -214,9 +212,9 @@ if (exists("cols_binary")){
 
 if (exists("cols_dummy")){
   if (sum(cols_dummy)>0){
-    cat("Character variables considered nominal and transformed to binary: ", fill=TRUE)
+    cat("Character variables considered nominal: ", fill=TRUE)
     cat(sum(cols_dummy),fill=TRUE)
-    knitr::kable(colnames(dummies2), col.names = "Binary dummies for nominal variables", linesep = '', longtable = T) %>%
+    knitr::kable(colnames(df_dummy), col.names = "Character variables considered nominal", linesep = '', longtable = T) %>%
       kable_styling(position = "center", full_width = FALSE, latex_options = c("HOLD_position","repeat_header"))
   } 
 }
@@ -242,16 +240,19 @@ if (length(numeric_percent[(numeric_percent>0.9)]) != 0L){
 
 
 ```{r, results="asis", dev="cairo_pdf", eval=eval}
-# Continuous variables?
+# Continuous variables at least 3
 if (exists("df_cont")){
-  if (ncol(df_cont) < ncol(df)){
-    cat("**Error: Some selected variables are not considered to be continuous. PCA is not a suitable method. For support contact: support@statsomat.com**")
-    cat("\\newline",fill=TRUE) 
-  } else {
+   if (ncol(df_cont) == ncol(df) && ncol(df_cont)>=3) {
     eval2 <- TRUE
-  }
+   } else if  (ncol(df_cont) < ncol(df)){
+    cat("**Error: For some selected variables we cannot assume a continuous distribution. The Principal Components Analysis (PCA) may not be a suitable method. There are more appropriate techniques to deal with mixed data types. For support contact: support@statsomat.com**")
+    cat("\\newline",fill=TRUE) 
+   } else if (ncol(df_cont) < 2) {
+    cat("**Error: Minimum 3 variables required. **")
+    cat("\\newline",fill=TRUE) 
+   }
 } else {
-  cat("**Error:  Some selected variables are not considered to be continuous. PCA is not a suitable method. For support contact: support@statsomat.com**")
+  cat("**Error:  For some selected variables we cannot assume a continuous distribution. The Principal Components Analysis (PCA) may not be a suitable method. There are more appropriate techniques to deal with mixed data types. For support contact: support@statsomat.com**")
   cat("\\newline",fill=TRUE) 
 }
 
@@ -284,25 +285,45 @@ if (length(which(complete_rate < 1 & complete_rate > 0.95)) != 0L){
 # Outliers
 try({
   if (length(knnoutlier(df_cont))>0){
-    cat("Outliers: We suspect outliers in the data. If observations are erroneous, you could drop them and restart the app. Outliers may affect negatively the execution or the results of the PCA. These are the suspected row numbers: ")
-    outliers_rows <- df_cont[knnoutlier(df_cont),]
-    outliers_rows <- outliers_rows[,1:5]
-    knitr::kable(outliers_rows, linesep = '', longtable = T, caption="Row(s) With Suspected Outliers (first 5 columns)", digits=1) %>%
-      kable_styling(position = "center", full_width = FALSE, latex_options = c("HOLD_position","repeat_header"))
+    cat("Outliers: We suspect outliers in the data. If the suspect outliers are erroneous, you could drop them and restart the app. Outliers may affect negatively the the results of the PCA. These are the suspected row numbers: ")
+    df_cont_unique <- unique(df_cont)
+    df_cont_complete <- df_cont[complete.cases(df_cont),]
+    outliers <- df_cont_complete[knnoutlier(df_cont),]
+    outliers_rows <- which(duplicated(rbind(outliers, df_cont_unique))) - length(knnoutlier(df_cont))
+    cat(outliers_rows, fill=TRUE)
   } else {
     cat("Outliers: We cannot identify any statistically significant outliers. ", fill=TRUE)
-    cat("\\newline",fill=TRUE) 
   }
 }, silent=TRUE)
+```  
+
+
+```{r, results="asis", dev="cairo_pdf", eval=eval2}
+# Normality
+# Normality for complete and outlier deleted dataset 
+tryCatch({
+  df_norm <- df_cont_complete
+  if (length(knnoutlier(df_cont))>0){
+    df_norm <- df_cont_complete[-knnoutlier(df_cont),]
+  } 
+  qqcors <- sapply(df_norm,normality)
+  pnorm <- mvnorm.test(df_norm, 100)$p.value
+  if (is.na(pnorm)) pnorm <- 0
+  if (sum(!qqcors)==0 || pnorm > 0.01){
+    eval3 <- TRUE
+    cat("Normality: The continuous variables are approximately (multivariate) normally distributed. The Principal Components Analysis (PCA) is a suitable method for revealing the dependencies in the dataset. ", fill=TRUE)
+    cat("\\newline",fill=TRUE) 
+  } else {
+    cat("Warning: We cannot assume an approximately (multivariate) normal distribution of the data. Depending on the distribution of the data and the purpose of the analysis, the Principal Components Analysis (PCA) may not be the optimal dimensionality reduction method. Consider transformations or other dimensionality reduction methods i.e. kernel PCA or Independent Component Analysis (ICA), compare to the results delivered by the PCA and choose the best method. For support contact support@statsomat.com", fill=TRUE)
+  }
+})
 
 ```  
 
-```{r, results="asis", eval=eval2}
-cat("**Warning: Depending on the distribution of the data and the purpose of the analysis, the Principal Components Analysis (PCA) may not be the optimal dimensionality reduction method. Consider also other dimensionality reduction methods i.e. kernel PCA or Independent Component Analysis (ICA) in comparison to the results delivered by the PCA. For support contact support@statsomat.com **", fill=TRUE)
-```
 
 ```{r include=FALSE, eval=eval2}
-pca <-  PCA(df, scale.unit = FALSE)
+ncp <- min(ncol(df),5)
+pca <-  PCA(df, ncp=ncp, scale.unit = TRUE)
 Investigate2(pca, document="pdf_document", keepRmd=TRUE, openFile=FALSE, out.selec=FALSE)
 ```
 
@@ -311,6 +332,28 @@ Investigate2(pca, document="pdf_document", keepRmd=TRUE, openFile=FALSE, out.sel
 ```{r, results="asis", eval=eval2}
 cat("\n# Outputs", fill=TRUE)
 ```
+
+```{r, results="asis", eval=eval2}
+cat("\n## Data Head (Transposed)", fill=TRUE)
+cat("First five five observations of the dataset. ", fill=TRUE)
+knitr::kable(t(head(df, n=5)), digits=3, linesep = '', longtable = T) %>%
+    kable_styling(position = "center", full_width = FALSE, latex_options = c("HOLD_position","repeat_header"))
+```
+
+```{r, results="asis", eval=eval2, dev="cairo_pdf", fig.align="center"}
+cat("\n## Pearson Correlations (Matrix)", fill=TRUE)
+cat("Pearson Correlation. Only complete cases (if any, missings are removed). ", fill=TRUE)
+M <- cor(df, use="complete.obs", method="pearson")
+corrplot(M, is.corr=TRUE, method="number", type="lower", tl.col="#396e9f", tl.cex = 0.5, cl.cex = 0.5, number.cex = 0.3, cl.align.text="l")
+```
+
+```{r, results="asis", eval=eval2, dev="cairo_pdf", fig.align="center"}
+cat("\n## Kendall Correlations (Matrix)", fill=TRUE)
+cat("Kendall Correlation.  Only complete cases (if any, missings are removed). ", fill=TRUE)
+M <- cor(df, use="complete.obs", method="kendall")
+corrplot(M, is.corr=TRUE, method="number", type="lower", tl.col="#396e9f", tl.cex = 0.5, cl.cex = 0.5, number.cex = 0.3, cl.align.text="l")
+```
+
 
 ```{r, results="asis", eval=eval2}
 cat("\n## Eigenvalues and proportion explained", fill=TRUE)
@@ -337,7 +380,7 @@ cat("\n## Variables", fill=TRUE)
 cat("\n### Loadings", fill=TRUE)
 cat("(Right) Eigenvectors", fill=TRUE)
 covariances <- as.matrix(pca$var$coord)
-eigenvalues <- pca$eig[1:5,1]
+eigenvalues <- pca$eig[1:ncp,1]
 eigenfactors <- t(t(covariances) / sqrt(eigenvalues))
 knitr::kable(eigenfactors, digits=3, linesep = '', longtable = T) %>%
     kable_styling(position = "center", full_width = FALSE, latex_options = c("HOLD_position","repeat_header"))
@@ -346,7 +389,7 @@ knitr::kable(eigenfactors, digits=3, linesep = '', longtable = T) %>%
 ```{r, results="asis", eval=eval2}
 cat("\n### Standardized Loadings", fill=TRUE)
 cat("Equivalent to: Correlations between variables and principal components (range [-1,1])", fill=TRUE)
-correlations <- pca$var$cor[,1:5]
+correlations <- pca$var$cor[,1:ncp]
 knitr::kable(correlations, digits=3, linesep = '', longtable = T) %>%
     kable_styling(position = "center", full_width = FALSE, latex_options = c("HOLD_position","repeat_header"))
 ```
@@ -368,29 +411,41 @@ cat("Variables coloured by variance explained (cos2)", fill=TRUE)
 cat("\\newline", fill=TRUE)
 fviz_pca_var(pca, col.var = "cos2", axes = c(1,2), 
              gradient.cols = c("#ff9900", "#2fa42d", "#396e9f"), title="", ggtheme=theme_minimal(base_size = 22))
+
+if (ncp>2) evaldim3 <- TRUE
 ```
 
-```{r, results="asis", eval=eval2, dev="cairo_pdf", fig.height=18, fig.width=15}
-cat("\n### Standardized Loadings Plots (Dimensions 1-5)", fill=TRUE)
-for (i in 1:5){
-  for (j in 1:5){
+```{r, results="asis", eval=evaldim3, dev="cairo_pdf", fig.height=18, fig.width=15}
+cat("\n### Standardized Loadings Plots (Dimensions 1-",ncp,")", fill=TRUE)
+for (i in 1:ncp){
+  for (j in 1:ncp){
   nam <- paste0(paste0("plot",i),j)
   plot <- fviz_pca_var(pca, axes = c(i,j), title="", ggtheme=theme_minimal(base_size = 8))
   assign(nam, plot)
   }
 }
+
 # PLots arranged
-gridExtra::grid.arrange(grobs = list(plot12,plot13,plot23,plot14,plot24,plot34,plot15,plot25,plot35,plot45), 
-                      nrow=4, ncol=3, widths = unit(c(10, 10, 10), "cm"), padding = unit(0.3, "line"))
+if (ncp==3){
+  gridExtra::grid.arrange(grobs = list(plot12,plot13,plot23), 
+                      nrow=1, ncol=3, widths = unit(c(10, 10, 10), "cm"), padding = unit(0.3, "line")) 
+} else if (ncp==4){
+  gridExtra::grid.arrange(grobs = list(plot12,plot13,plot23,plot14,plot24,plot34), 
+                      nrow=2, ncol=3, widths = unit(c(10, 10, 10), "cm"), padding = unit(0.3, "line")) 
+} else {
+  gridExtra::grid.arrange(grobs = list(plot12,plot13,plot23,plot14,plot24,plot34,plot15,plot25,plot35,plot45), 
+                      nrow=4, ncol=3, widths = unit(c(10, 10, 10), "cm"), padding = unit(0.3, "line")) 
+}
+
 ```
 
-```{r, results="asis", eval=eval2, dev="cairo_pdf", fig.height=5}
+```{r, results="asis", eval=eval2, dev="cairo_pdf", fig.height=5, fig.align="center"}
 cat("\n### Standardized Loadings Plot (Matrix)", fill=TRUE)
 col_statsomat <- colorRampPalette(c("#ff9900", "#2fa42d", "#396e9f"))
 corrplot(pca$var$cor, is.corr=FALSE, tl.col="#396e9f", col=col_statsomat(10), tl.cex = 0.5, cl.cex = 0.5, cl.align.text="l")
 ```
 
-```{r, results="asis", eval=eval2, dev="cairo_pdf", fig.height=5}
+```{r, results="asis", eval=eval2, dev="cairo_pdf", fig.height=5, fig.align="center"}
 cat("\n### Squared Standardized Loadings Plot (Matrix)", fill=TRUE)
 cat("Variance explained (cos2)", fill=TRUE)
 cat("\\newline", fill=TRUE)
@@ -413,18 +468,28 @@ fviz_pca_ind(pca, axes = c(1,2), title="", col.ind = "#396e9f", ggtheme=theme_mi
 ```
 
 
-```{r, results="asis", eval=eval2, fig.height=18, fig.width=15, dev="cairo_pdf"}
-cat("\n### Score Plots (Dimensions 1-5)", fill=TRUE)
-for (i in 1:5){
-  for (j in 1:5){
+```{r, results="asis", eval=evaldim3, fig.height=18, fig.width=15, dev="cairo_pdf"}
+cat("\n### Score Plots (Dimensions 1-",ncp,")", fill=TRUE)
+for (i in 1:ncp){
+  for (j in 1:ncp){
   nam <- paste0(paste0("plot",i),j)
   plot <- fviz_pca_ind(pca, axes = c(i,j), col.ind = "#396e9f", title="", ggtheme=theme_minimal(base_size = 8))
   assign(nam, plot)
   }
 }
+
 # PLots arranged
-gridExtra::grid.arrange(grobs = list(plot12,plot13,plot23,plot14,plot24,plot34,plot15,plot25,plot35,plot45), 
-                      nrow=4, ncol=3, widths = unit(c(10, 10, 10), "cm"), padding = unit(0.3, "line"))
+if (ncp==3){
+  gridExtra::grid.arrange(grobs = list(plot12,plot13,plot23), 
+                      nrow=1, ncol=3, widths = unit(c(10, 10, 10), "cm"), padding = unit(0.3, "line")) 
+} else if (ncp==4){
+  gridExtra::grid.arrange(grobs = list(plot12,plot13,plot23,plot14,plot24,plot34), 
+                      nrow=2, ncol=3, widths = unit(c(10, 10, 10), "cm"), padding = unit(0.3, "line")) 
+} else {
+  gridExtra::grid.arrange(grobs = list(plot12,plot13,plot23,plot14,plot24,plot34,plot15,plot25,plot35,plot45), 
+                      nrow=4, ncol=3, widths = unit(c(10, 10, 10), "cm"), padding = unit(0.3, "line")) 
+}
+
 ```
 
 ```{r, results="asis", eval=eval2, dev="cairo_pdf"}
@@ -437,9 +502,15 @@ fviz_pca_biplot(pca, col.var = "#ff9900", col.ind = "#396e9f", title="")
 ```
 
 ```{r, results="asis", eval=eval2}
-cat("\n# Interpretation by FactoInvestigate package", fill=TRUE)
+cat("\n# Interpretation by the FactoInvestigate package", fill=TRUE)
 ```
 
 ```{r child = 'Investigate.Rmd', eval=eval2}
 ```
+
+```{r, results="asis", eval=eval2}
+cat("\n# Final Comment", fill=TRUE)
+cat("The automatic computation and interpretation delivered by the Statsomat app should not completely replace the classical, human-based graphical exploratory data analysis and statistical analysis. There may be data cases for which the Statsomat does not deliver the most optimal solution or output interpretation.", fill=TRUE)
+```   
+
 

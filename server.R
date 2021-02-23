@@ -159,14 +159,14 @@ function(input, output, session) {
     removeModal()
     
     
-    if (nrow(datainput()) > 1000){
+    if (nrow(datainput()) > 100000){
       showNotification("Maximum sample size exceeded. For more contact: support@statsomat.com", duration=30)
       Sys.sleep(5)
       session$close()
     }
     
-    if (nrow(datainput()) < 7){
-      showNotification("Error: Minimum 7 observations required. ", duration=30)
+    if (nrow(datainput()) < 10){
+      showNotification("Error: Minimum 10 observations required. ", duration=30)
       Sys.sleep(5)
       session$close()
     }
@@ -204,14 +204,14 @@ function(input, output, session) {
     }
     
     
-    if (length(input$selection1$right) > 25 ){
+    if (length(input$selection1$right) > 50 ){
       showNotification("Maximum number of columns exceeded. For more contact: support@statsomat.com", duration=30)
       Sys.sleep(5)
       session$close()
     }
     
-    if (length(input$selection1$left) < 2 ){
-      showNotification("Error: Minimum 2 columns required. ", duration=30)
+    if (ncol(datainput()) < 3 ){
+      showNotification("Error: Minimum 3 columns required. ", duration=30)
       Sys.sleep(5)
       session$close()
     }
