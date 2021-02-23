@@ -28,6 +28,7 @@ library(gridExtra)
 eval0 <- FALSE
 eval <- FALSE
 eval2 <- FALSE
+eval3 <- FALSE
 evaldim3 <- FALSE
 ```
 
@@ -245,14 +246,14 @@ if (exists("df_cont")){
    if (ncol(df_cont) == ncol(df) && ncol(df_cont)>=3) {
     eval2 <- TRUE
    } else if  (ncol(df_cont) < ncol(df)){
-    cat("**Error: For some selected variables we cannot assume a continuous distribution. The Principal Components Analysis (PCA) may not be a suitable method. There are more appropriate techniques to deal with mixed data types. For support contact: support@statsomat.com**")
+    cat("**Error: For some selected variables we cannot assume a continuous distribution. The Principal Components Analysis (PCA) may not be a suitable method. You could drop the non-continuous variables or consider more appropriate techniques to deal with mixed data types. For support contact: support@statsomat.com**")
     cat("\\newline",fill=TRUE) 
    } else if (ncol(df_cont) < 2) {
     cat("**Error: Minimum 3 variables required. **")
     cat("\\newline",fill=TRUE) 
    }
 } else {
-  cat("**Error:  For some selected variables we cannot assume a continuous distribution. The Principal Components Analysis (PCA) may not be a suitable method. There are more appropriate techniques to deal with mixed data types. For support contact: support@statsomat.com**")
+  cat("**Error:  For some selected variables we cannot assume a continuous distribution. The Principal Components Analysis (PCA) may not be a suitable method. You could drop the non-continuous variables or consider more appropriate techniques to deal with mixed data types. For support contact: support@statsomat.com**")
   cat("\\newline",fill=TRUE) 
 }
 
@@ -302,9 +303,9 @@ try({
 # Normality
 # Normality for complete and outlier deleted dataset 
 tryCatch({
-  df_norm <- df_cont_complete
+  df_norm <- df_cont[complete.cases(df_cont),]
   if (length(knnoutlier(df_cont))>0){
-    df_norm <- df_cont_complete[-knnoutlier(df_cont),]
+    df_norm <- df_norm[-knnoutlier(df_cont),]
   } 
   qqcors <- sapply(df_norm,normality)
   pnorm <- mvnorm.test(df_norm, 100)$p.value
@@ -322,71 +323,83 @@ tryCatch({
 
 
 ```{r include=FALSE, eval=eval2}
+tryCatch({
+scale = FALSE
 ncp <- min(ncol(df),5)
-pca <-  PCA(df, ncp=ncp, scale.unit = TRUE)
+pca <-  PCA(df, ncp=ncp, scale.unit = scale)
 Investigate2(pca, document="pdf_document", keepRmd=TRUE, openFile=FALSE, out.selec=FALSE)
+
+# Initialize next computations
+eval3 <- TRUE
+
+}, error=function(e) {
+  
+  stop(safeError("Error. Please contact the support. "))
+  
+})
 ```
 
 \pagebreak 
 
-```{r, results="asis", eval=eval2}
+```{r, results="asis", eval=eval3}
 cat("\n# Outputs", fill=TRUE)
 ```
 
-```{r, results="asis", eval=eval2}
+```{r, results="asis", eval=eval3}
 cat("\n## Data Head (Transposed)", fill=TRUE)
-cat("First five five observations of the dataset. ", fill=TRUE)
+cat("First five observations of the dataset. ", fill=TRUE)
 knitr::kable(t(head(df, n=5)), digits=3, linesep = '', longtable = T) %>%
     kable_styling(position = "center", full_width = FALSE, latex_options = c("HOLD_position","repeat_header"))
 ```
 
-```{r, results="asis", eval=eval2, dev="cairo_pdf", fig.align="center"}
+```{r, results="asis", eval=eval3, dev="cairo_pdf", fig.align="center"}
 cat("\n## Pearson Correlations (Matrix)", fill=TRUE)
 cat("Pearson Correlation. Only complete cases (if any, missings are removed). ", fill=TRUE)
 M <- cor(df, use="complete.obs", method="pearson")
-corrplot(M, is.corr=TRUE, method="number", type="lower", tl.col="#396e9f", tl.cex = 0.5, cl.cex = 0.5, number.cex = 0.3, cl.align.text="l")
+corrplot(M, is.corr=TRUE, method="number", type="lower", tl.col="#396e9f", tl.cex = 0.5, cl.cex = 0.5, number.cex = 0.4, cl.align.text="l")
 ```
 
-```{r, results="asis", eval=eval2, dev="cairo_pdf", fig.align="center"}
+```{r, results="asis", eval=eval3, dev="cairo_pdf", fig.align="center"}
 cat("\n## Kendall Correlations (Matrix)", fill=TRUE)
 cat("Kendall Correlation.  Only complete cases (if any, missings are removed). ", fill=TRUE)
 M <- cor(df, use="complete.obs", method="kendall")
-corrplot(M, is.corr=TRUE, method="number", type="lower", tl.col="#396e9f", tl.cex = 0.5, cl.cex = 0.5, number.cex = 0.3, cl.align.text="l")
+corrplot(M, is.corr=TRUE, method="number", type="lower", tl.col="#396e9f", tl.cex = 0.5, cl.cex = 0.5, number.cex = 0.4, cl.align.text="l")
 ```
 
 
-```{r, results="asis", eval=eval2}
-cat("\n## Eigenvalues and proportion explained", fill=TRUE)
+```{r, results="asis", eval=eval3}
+cat("\n## Eigenvalues and Proportion Explained", fill=TRUE)
 ```
 
-```{r, eval=eval2}
+```{r, eval=eval3}
 eigentable <- get_eigenvalue(pca)
-knitr::kable(eigentable, digits=3, col.names = c("Eigenvalue","Variance explained (%)", "Cumulative Variance Explained (%)"), linesep = '', longtable = T) %>%
+knitr::kable(eigentable, digits=3, col.names = c("Eigenvalue","Variance Explained (%)", "Cumulative Variance Explained (%)"), linesep = '', longtable = T) %>%
     kable_styling(position = "center", full_width = FALSE, latex_options = c("HOLD_position","repeat_header"))
 ```
 
-```{r, results="asis", eval=eval2}
+```{r, results="asis", eval=eval3}
 cat("\n## Screeplot", fill=TRUE)
 fviz_eig(pca, addlabels = TRUE, ylim = c(0, 50))
 ```
 
 \pagebreak 
 
-```{r, results="asis", eval=eval2}
+```{r, results="asis", eval=eval3}
 cat("\n## Variables", fill=TRUE)
 ```
 
-```{r, results="asis", eval=eval2}
+```{r, results="asis", eval=eval3}
 cat("\n### Loadings", fill=TRUE)
-cat("(Right) Eigenvectors", fill=TRUE)
-covariances <- as.matrix(pca$var$coord)
-eigenvalues <- pca$eig[1:ncp,1]
-eigenfactors <- t(t(covariances) / sqrt(eigenvalues))
-knitr::kable(eigenfactors, digits=3, linesep = '', longtable = T) %>%
+cat("Equivalent to: Principal Components", fill=TRUE)
+cat("\\newline", fill=TRUE)
+cat("Equivalent to: (Right) Eigenvectors", fill=TRUE)
+k <- prcomp(df, scale. = scale)
+princomps <- k$rotation
+knitr::kable(princomps, digits=3, linesep = '', longtable = T) %>%
     kable_styling(position = "center", full_width = FALSE, latex_options = c("HOLD_position","repeat_header"))
 ```
 
-```{r, results="asis", eval=eval2}
+```{r, results="asis", eval=eval3}
 cat("\n### Standardized Loadings", fill=TRUE)
 cat("Equivalent to: Correlations between variables and principal components (range [-1,1])", fill=TRUE)
 correlations <- pca$var$cor[,1:ncp]
@@ -394,7 +407,7 @@ knitr::kable(correlations, digits=3, linesep = '', longtable = T) %>%
     kable_styling(position = "center", full_width = FALSE, latex_options = c("HOLD_position","repeat_header"))
 ```
 
-```{r, results="asis", eval=eval2}
+```{r, results="asis", eval=eval3}
 cat("\n### Squared Standardized Loadings", fill=TRUE)
 cat("Equivalent to: Squared correlations", fill=TRUE)
 cat("\\newline", fill=TRUE)
@@ -405,7 +418,7 @@ knitr::kable(pca$var$cos2, digits=3, linesep = '', longtable = T) %>%
     kable_styling(position = "center", full_width = FALSE, latex_options = c("HOLD_position","repeat_header"))
 ```
 
-```{r, results="asis", eval=eval2, dev="cairo_pdf", fig.height=18, fig.width=15}
+```{r, results="asis", eval=eval3, dev="cairo_pdf", fig.height=18, fig.width=15}
 cat("\n### Standardized Loadings Plots (Dimenstions 1-2)", fill=TRUE)
 cat("Variables coloured by variance explained (cos2)", fill=TRUE)
 cat("\\newline", fill=TRUE)
@@ -439,30 +452,30 @@ if (ncp==3){
 
 ```
 
-```{r, results="asis", eval=eval2, dev="cairo_pdf", fig.height=5, fig.align="center"}
+```{r, results="asis", eval=eval3, dev="cairo_pdf", fig.height=5, fig.align="center"}
 cat("\n### Standardized Loadings Plot (Matrix)", fill=TRUE)
 col_statsomat <- colorRampPalette(c("#ff9900", "#2fa42d", "#396e9f"))
 corrplot(pca$var$cor, is.corr=FALSE, tl.col="#396e9f", col=col_statsomat(10), tl.cex = 0.5, cl.cex = 0.5, cl.align.text="l")
 ```
 
-```{r, results="asis", eval=eval2, dev="cairo_pdf", fig.height=5, fig.align="center"}
+```{r, results="asis", eval=eval3, dev="cairo_pdf", fig.height=5, fig.align="center"}
 cat("\n### Squared Standardized Loadings Plot (Matrix)", fill=TRUE)
 cat("Variance explained (cos2)", fill=TRUE)
 cat("\\newline", fill=TRUE)
 corrplot(pca$var$cos2, is.corr=FALSE, method="color", tl.col="#396e9f", tl.cex = 0.5, cl.cex = 0.5, cl.align.text="l")
 ```
 
-```{r, results="asis", eval=eval2, dev="cairo_pdf"}
+```{r, results="asis", eval=eval3, dev="cairo_pdf"}
 cat("\n## Observations", fill=TRUE)
 ```
 
-```{r, results="asis", eval=eval2, fig.height=9}
+```{r, results="asis", eval=eval3, fig.height=9}
 cat("\n### Scores (Head)", fill=TRUE)
 knitr::kable(head(pca$ind$coord), digits=3, linesep = '', longtable = T) %>%
     kable_styling(position = "center", full_width = FALSE, latex_options = c("HOLD_position","repeat_header"))
 ```
 
-```{r, results="asis", eval=eval2, dev="cairo_pdf"}
+```{r, results="asis", eval=eval3, dev="cairo_pdf"}
 cat("\n### Score Plot (Dimensions 1-2)", fill=TRUE)
 fviz_pca_ind(pca, axes = c(1,2), title="", col.ind = "#396e9f", ggtheme=theme_minimal(base_size = 11))
 ```
@@ -492,7 +505,7 @@ if (ncp==3){
 
 ```
 
-```{r, results="asis", eval=eval2, dev="cairo_pdf"}
+```{r, results="asis", eval=eval3, dev="cairo_pdf"}
 cat("\n### Biplot Dimensions 1-2", fill=TRUE)
 cat("An observation that is on the same side of a given variable has a high value for this variable")
 cat("\\newline", fill=TRUE)
@@ -501,16 +514,21 @@ cat("\\newline", fill=TRUE)
 fviz_pca_biplot(pca, col.var = "#ff9900", col.ind = "#396e9f", title="")
 ```
 
-```{r, results="asis", eval=eval2}
+```{r, results="asis", eval=eval3}
 cat("\n# Interpretation by the FactoInvestigate package", fill=TRUE)
 ```
 
-```{r child = 'Investigate.Rmd', eval=eval2}
+```{r child = 'Investigate.Rmd', eval=eval3}
 ```
 
-```{r, results="asis", eval=eval2}
+```{r, results="asis", eval=eval3}
 cat("\n# Final Comment", fill=TRUE)
 cat("The automatic computation and interpretation delivered by the Statsomat app should not completely replace the classical, human-based graphical exploratory data analysis and statistical analysis. There may be data cases for which the Statsomat does not deliver the most optimal solution or output interpretation.", fill=TRUE)
 ```   
+
+```{r, results="asis", dev="cairo_pdf", eval=eval3}
+cat("\n# Statistical Methods",fill=TRUE)
+cat("The statistical analysis was done using R [@stats] and following main R packages: FactoMineR [@FactoMineR], FactoInvestigate [@FactoInvestigate], factoextra [@factoextra], corrplot [@corrplot], energy [@energy], DDoutlier [@ddout].", fill=TRUE)
+```  
 
 
