@@ -4,6 +4,29 @@ title: "Principal Components Analysis"
 
 \normalsize
 
+```{r eval=FALSE, echo=indic_missings}
+# Missing values imputation 
+df <- imputeMissings::impute(df, method="randomForest")
+```   
+
+```{r eval=FALSE, echo=indic_missings}
+# Define number of dimensions to keep in the results
+ncp <- min(ncol(df),5)
+# Perform PCA 
+pca <-  PCA(df, ncp=ncp, scale.unit = scale)
+```
+
+```{r eval=FALSE, echo=indic_missings}
+# Loadings 
+## Center and scale 
+df_svd <- scale(df, center=TRUE, scale=scale)
+## SVD 
+tmp <- svd.triplet(df_svd, ncp = ncp)
+princomps <- tmp$V
+colprincomp <- c("PC1", "PC2", "PC3", "PC4", "PC5")
+rownames(princomps) <- colnames(df)
+kable(princomps, digits=3, col.names=colprincomp[1:ncp], format="simple")
+```   
 
 ```{r, results="asis", eval=eval_code}
 cat("\\newpage ")

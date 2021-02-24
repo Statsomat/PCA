@@ -24,12 +24,16 @@ library(parallel)
 library(graphics)
 library(ggplot2)
 library(gridExtra)
+library(imputeMissings)
+library(reshape2)
+library(onewaytests)
 
 eval0 <- FALSE
 eval <- FALSE
 eval2 <- FALSE
 eval3 <- FALSE
 evaldim3 <- FALSE
+loadings_code <- FALSE
 ```
 
 ```{r}
@@ -270,16 +274,15 @@ if (length(which(complete_rate < 0.95)) != 0L){
   knitr::kable(miss_var, col.names = "Variable(s) with missing values", linesep = '', longtable = T) %>%
     kable_styling(position = "center", full_width = FALSE, latex_options = c("HOLD_position","repeat_header"))
 }
-``` 
 
-
-```{r, results="asis", dev="cairo_pdf", eval=eval2}
-# Missings in continuous <=5% 
-indic_missings <- FALSE
-if (length(which(complete_rate < 1 & complete_rate > 0.95)) != 0L){
-  cat("Missings: There exist variable(s) with <5% missing values. We assume a random missing pattern and apply a missing values imputation technique (currently the sample mean). ")
+if (nrow(df_cont[complete.cases(df_cont),]) < 10){
+  cat("**Error: Minimum 10 complete cases required. **")
+  miss_var <- names(which(complete_rate < 0.95)) 
+  eval2 <- FALSE
+  knitr::kable(miss_var, col.names = "Variable(s) with missing values", linesep = '', longtable = T) %>%
+    kable_styling(position = "center", full_width = FALSE, latex_options = c("HOLD_position","repeat_header"))
 }
-```   
+``` 
 
 
 ```{r, results="asis", dev="cairo_pdf", eval=eval2}
@@ -311,7 +314,6 @@ tryCatch({
   pnorm <- mvnorm.test(df_norm, 100)$p.value
   if (is.na(pnorm)) pnorm <- 0
   if (sum(!qqcors)==0 || pnorm > 0.01){
-    eval3 <- TRUE
     cat("Normality: The continuous variables are approximately (multivariate) normally distributed. The Principal Components Analysis (PCA) is a suitable method for revealing the dependencies in the dataset. ", fill=TRUE)
     cat("\\newline",fill=TRUE) 
   } else {
@@ -321,10 +323,48 @@ tryCatch({
 
 ```  
 
+```{r, results="asis", dev="cairo_pdf", eval=eval2}
+# Missings in continuous <=5% 
+indic_missings <- FALSE
+if (length(which(complete_rate < 1 & complete_rate > 0.95)) != 0L){
+  cat("Missings: There exist variable(s) with <5% missing values. We assume a random missing pattern and apply a missing values imputation technique (Random Forest). ")
+  indic_missings <- TRUE
+  df <- imputeMissings::impute(df, method="randomForest")
+}
+```   
+
+
+```{r include=FALSE, eval=eval2}
+# Decide for scaling
+scale <- TRUE
+tryCatch({
+  dfm <- reshape2::melt(df)
+  bf <- bf.test(value ~ variable, data=dfm, alpha = 0.01)
+  if (bf$p.value <=0.01){
+    scale <- TRUE
+  } else {
+    scale <- FALSE
+  }
+
+}, error=function(e) {
+  
+  stop(safeError("Error. Please contact the support. "))
+  
+})
+```
+
+
+```{r, results="asis", dev="cairo_pdf", eval=eval2}
+if (scale == TRUE){
+  cat("Scaling: Since we detected statistically significant differences between the variances of the variables, we scale the data before the PCA. ", fill=TRUE)
+} else {
+  cat("Scaling: Since we do not detect statistically significant differences between the variances of the variables, we do not scale the data before the PCA. ", fill=TRUE)
+}
+```
+
 
 ```{r include=FALSE, eval=eval2}
 tryCatch({
-scale = FALSE
 ncp <- min(ncol(df),5)
 pca <-  PCA(df, ncp=ncp, scale.unit = scale)
 Investigate2(pca, document="pdf_document", keepRmd=TRUE, openFile=FALSE, out.selec=FALSE)
@@ -392,11 +432,19 @@ cat("\n## Variables", fill=TRUE)
 cat("\n### Loadings", fill=TRUE)
 cat("Equivalent to: Principal Components", fill=TRUE)
 cat("\\newline", fill=TRUE)
-cat("Equivalent to: (Right) Eigenvectors", fill=TRUE)
-k <- prcomp(df, scale. = scale)
-princomps <- k$rotation
-knitr::kable(princomps, digits=3, linesep = '', longtable = T) %>%
+cat("Equivalent to: (Right) Eigenvectors in Singular Value Decomposition (SVD)", fill=TRUE)
+
+df_svd <- scale(df, center=TRUE, scale=scale)
+tmp <- svd.triplet(df_svd, ncp = ncp)
+princomps <- tmp$V
+colprincomp <- c("PC1", "PC2", "PC3", "PC4", "PC5")
+rownames(princomps) <- colnames(df)
+knitr::kable(princomps, digits=3, col.names=colprincomp[1:ncp], linesep = '', longtable = T) %>%
     kable_styling(position = "center", full_width = FALSE, latex_options = c("HOLD_position","repeat_header"))
+
+#k <- prcomp(df, scale. = scale)
+#princomps <- k$rotation
+#knitr::kable(princomps, digits=3, linesep = '', longtable = T)
 ```
 
 ```{r, results="asis", eval=eval3}
