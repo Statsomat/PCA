@@ -159,7 +159,7 @@ function(input, output, session) {
     removeModal()
     
     
-    if (nrow(datainput()) > 100000){
+    if (nrow(datainput()) > 2500){
       showNotification("Maximum sample size exceeded. For more contact: support@statsomat.com", duration=30)
       Sys.sleep(5)
       session$close()
@@ -204,7 +204,7 @@ function(input, output, session) {
     }
     
     
-    if (length(input$selection1$right) > 50 ){
+    if (length(input$selection1$right) > 25 ){
       showNotification("Maximum number of columns exceeded. For more contact: support@statsomat.com", duration=30)
       Sys.sleep(5)
       session$close()
@@ -258,14 +258,10 @@ function(input, output, session) {
     enc_guessed <- guess_encoding(input$file$datapath)
     enc_guessed_first <- enc_guessed[[1]][1]
     
-    if (is.null(input$textprediction)){
-      params <- list(data = datainput(), filename=input$file, fencoding=input$fencoding, decimal=input$decimal, enc_guessed = enc_guessed_first, 
-                   vars1 = input$selection1$right, model = input$text, direction = NA)
-    } else {
-      params <- list(data = datainput(), filename=input$file, fencoding=input$fencoding, decimal=input$decimal, enc_guessed = enc_guessed_first, 
-                     vars1 = input$selection1$right, model = input$text, direction = input$textprediction)
-    }
-    
+
+    params <- list(data = datainput(), filename=input$file, fencoding=input$fencoding, decimal=input$decimal, enc_guessed = enc_guessed_first, 
+                     vars1 = input$selection1$right)
+
     
     tryCatch({
       

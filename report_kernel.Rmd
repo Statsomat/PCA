@@ -33,12 +33,16 @@ eval <- FALSE
 eval2 <- FALSE
 eval3 <- FALSE
 evaldim3 <- FALSE
-loadings_code <- FALSE
+eval_rows <- FALSE
+ncp3 <- FALSE
+ncp4 <- FALSE
+ncp5 <- FALSE
 ```
 
 ```{r}
 # Get selected data
 df <- params$data
+df_code <- df
 
 tryCatch({
   df <- df[,params$vars1,drop=FALSE]
@@ -75,6 +79,7 @@ if (length(which(rowSums(rowsums) == dim(df)[2])) != 0L){
   rows_drop <- (which(rowSums(rowsums) == dim(df)[2]))
   length_non_complete <- length(which(rowSums(rowsums) == dim(df)[2]))
   df <- df[-rows_drop, ,drop=FALSE]
+  eval_rows <- TRUE
 }
 
 # Convert logical variables to character
@@ -252,7 +257,7 @@ if (exists("df_cont")){
    } else if  (ncol(df_cont) < ncol(df)){
     cat("**Error: For some selected variables we cannot assume a continuous distribution. The Principal Components Analysis (PCA) may not be a suitable method. You could drop the non-continuous variables or consider more appropriate techniques to deal with mixed data types. For support contact: support@statsomat.com**")
     cat("\\newline",fill=TRUE) 
-   } else if (ncol(df_cont) < 2) {
+   } else if (ncol(df_cont) < 3) {
     cat("**Error: Minimum 3 variables required. **")
     cat("\\newline",fill=TRUE) 
    }
@@ -341,6 +346,7 @@ tryCatch({
   dfm <- reshape2::melt(df)
   bf <- bf.test(value ~ variable, data=dfm, alpha = 0.01)
   if (bf$p.value <=0.01){
+    # True if BF test significant
     scale <- TRUE
   } else {
     scale <- FALSE
@@ -356,16 +362,25 @@ tryCatch({
 
 ```{r, results="asis", dev="cairo_pdf", eval=eval2}
 if (scale == TRUE){
-  cat("Scaling: Since we detected statistically significant differences between the variances of the variables, we scale the data before the PCA. ", fill=TRUE)
+  cat("Scaling: Since we detect statistically significant differences between the variances of the variables, we scale the data before the PCA. For other options contact the support. ", fill=TRUE)
 } else {
-  cat("Scaling: Since we do not detect statistically significant differences between the variances of the variables, we do not scale the data before the PCA. ", fill=TRUE)
+  cat("Scaling: Since we do not detect statistically significant differences between the variances of the variables, we do not scale the data before the PCA. For other options contact the support. ", fill=TRUE)
 }
 ```
 
 
 ```{r include=FALSE, eval=eval2}
 tryCatch({
+  
+# Dimensions to show
 ncp <- min(ncol(df),5)
+if (ncp==3){
+  ncp3 <- TRUE
+} else if (ncp==4){
+  ncp4 <- TRUE
+} else {
+  ncp5 <- TRUE
+}
 pca <-  PCA(df, ncp=ncp, scale.unit = scale)
 Investigate2(pca, document="pdf_document", keepRmd=TRUE, openFile=FALSE, out.selec=FALSE)
 
@@ -394,14 +409,14 @@ knitr::kable(t(head(df, n=5)), digits=3, linesep = '', longtable = T) %>%
 
 ```{r, results="asis", eval=eval3, dev="cairo_pdf", fig.align="center"}
 cat("\n## Pearson Correlations (Matrix)", fill=TRUE)
-cat("Pearson Correlation. Only complete cases (if any, missings are removed). ", fill=TRUE)
+cat("Pearson Correlation. ", fill=TRUE)
 M <- cor(df, use="complete.obs", method="pearson")
 corrplot(M, is.corr=TRUE, method="number", type="lower", tl.col="#396e9f", tl.cex = 0.5, cl.cex = 0.5, number.cex = 0.4, cl.align.text="l")
 ```
 
 ```{r, results="asis", eval=eval3, dev="cairo_pdf", fig.align="center"}
 cat("\n## Kendall Correlations (Matrix)", fill=TRUE)
-cat("Kendall Correlation.  Only complete cases (if any, missings are removed). ", fill=TRUE)
+cat("Kendall Correlation. ", fill=TRUE)
 M <- cor(df, use="complete.obs", method="kendall")
 corrplot(M, is.corr=TRUE, method="number", type="lower", tl.col="#396e9f", tl.cex = 0.5, cl.cex = 0.5, number.cex = 0.4, cl.align.text="l")
 ```
@@ -489,13 +504,16 @@ for (i in 1:ncp){
 # PLots arranged
 if (ncp==3){
   gridExtra::grid.arrange(grobs = list(plot12,plot13,plot23), 
-                      nrow=1, ncol=3, widths = unit(c(10, 10, 10), "cm"), padding = unit(0.3, "line")) 
+                      nrow=1, ncol=3, widths = unit(c(11, 11, 11), "cm"), heights = unit(11, "cm"), 
+                      padding = unit(0.3, "line")) 
 } else if (ncp==4){
   gridExtra::grid.arrange(grobs = list(plot12,plot13,plot23,plot14,plot24,plot34), 
-                      nrow=2, ncol=3, widths = unit(c(10, 10, 10), "cm"), padding = unit(0.3, "line")) 
+                      nrow=2, ncol=3, widths = unit(c(11, 11, 11), "cm"), heights = unit(c(11,11), "cm"), 
+                      padding = unit(0.3, "line")) 
 } else {
   gridExtra::grid.arrange(grobs = list(plot12,plot13,plot23,plot14,plot24,plot34,plot15,plot25,plot35,plot45), 
-                      nrow=4, ncol=3, widths = unit(c(10, 10, 10), "cm"), padding = unit(0.3, "line")) 
+                      nrow=4, ncol=3, widths = unit(c(11, 11, 11), "cm"), heights = unit(c(11,11,11,11), "cm"), 
+                      padding = unit(0.3, "line")) 
 }
 
 ```
@@ -542,13 +560,16 @@ for (i in 1:ncp){
 # PLots arranged
 if (ncp==3){
   gridExtra::grid.arrange(grobs = list(plot12,plot13,plot23), 
-                      nrow=1, ncol=3, widths = unit(c(10, 10, 10), "cm"), padding = unit(0.3, "line")) 
+                      nrow=1, ncol=3, widths = unit(c(11, 11, 11), "cm"), heights = unit(11, "cm"), 
+                      padding = unit(0.3, "line")) 
 } else if (ncp==4){
   gridExtra::grid.arrange(grobs = list(plot12,plot13,plot23,plot14,plot24,plot34), 
-                      nrow=2, ncol=3, widths = unit(c(10, 10, 10), "cm"), padding = unit(0.3, "line")) 
+                      nrow=2, ncol=3, widths = unit(c(11, 11, 11), "cm"), heights = unit(c(11,11), "cm"), 
+                      padding = unit(0.3, "line")) 
 } else {
   gridExtra::grid.arrange(grobs = list(plot12,plot13,plot23,plot14,plot24,plot34,plot15,plot25,plot35,plot45), 
-                      nrow=4, ncol=3, widths = unit(c(10, 10, 10), "cm"), padding = unit(0.3, "line")) 
+                      nrow=4, ncol=3, widths = unit(c(11, 11, 11), "cm"), heights = unit(c(11, 11, 11, 11), "cm"), 
+                      padding = unit(0.3, "line")) 
 }
 
 ```
@@ -568,6 +589,8 @@ cat("\n# Interpretation by the FactoInvestigate package", fill=TRUE)
 
 ```{r child = 'Investigate.Rmd', eval=eval3}
 ```
+
+\pagebreak
 
 ```{r, results="asis", eval=eval3}
 cat("\n# Final Comment", fill=TRUE)
