@@ -13,7 +13,7 @@ df <- df[-rows_drop, ,drop=FALSE]
 
 ```{r, results="asis", eval=eval_code, echo=FALSE}
 indices <- which(colnames(df_code) %in% colnames(df))
-cat("\\# `Column names of selected variables`")
+cat("\\# `Selected variables`")
 cat("\\newline ")
 cat("`colnames_selected = ")
 cat(paste0("c(", paste(indices, collapse=','), ")`"))
@@ -96,7 +96,7 @@ kable(pca$var$cos2, digits=3, format="simple")
 ```
 
 ```{whites, eval=FALSE, echo = eval_code}
-## Standardized Loadings Plots (Dimenstions 1-2)
+## Standardized Loadings Plots (Dimensions 1-2)
 fviz_pca_var(pca, col.var = "cos2", axes = c(1,2), 
              gradient.cols = c("#ff9900", "#2fa42d", "#396e9f"), 
              title="", ggtheme=theme_minimal(base_size = 22))
@@ -113,7 +113,7 @@ for (i in 1:ncp){
   }
 }
 
-# PLots arranged
+# Plots arranged
 gridExtra::grid.arrange(grobs = list(plot12,plot13,plot23), 
                       nrow=1, ncol=3, widths = unit(c(7, 7, 7), "cm"), 
                       heights = unit(7, "cm"),
@@ -131,7 +131,7 @@ for (i in 1:ncp){
   }
 }
 
-# PLots arranged
+# Plots arranged
 gridExtra::grid.arrange(grobs = list(plot12,plot13,plot23,plot14,plot24,plot34), 
                       nrow=2, ncol=3, widths = unit(c(6, 6, 6), "cm"), 
                       heights = unit(c(6, 6), "cm"),
@@ -149,7 +149,7 @@ for (i in 1:ncp){
   }
 }
 
-# PLots arranged
+# Plots arranged
 gridExtra::grid.arrange(grobs = list(plot12,plot13,plot23,plot14,plot24,plot34,
                                        plot15,plot25,plot35,plot45), 
                       nrow=4, ncol=3, widths = unit(c(5, 5, 5), "cm"), 
@@ -195,7 +195,7 @@ for (i in 1:ncp){
   }
 }
 
-# PLots arranged
+# Plots arranged
 gridExtra::grid.arrange(grobs = list(plot12,plot13,plot23), 
                       nrow=1, ncol=3, widths = unit(c(7, 7, 7), "cm"), 
                       heights = unit(7, "cm"),
@@ -213,7 +213,7 @@ for (i in 1:ncp){
   }
 }
 
-# PLots arranged
+# Plots arranged
 gridExtra::grid.arrange(grobs = list(plot12,plot13,plot23,plot14,plot24,plot34), 
                       nrow=2, ncol=3, widths = unit(c(6, 6, 6), "cm"), 
                       heights = unit(c(6, 6), "cm"),
@@ -231,7 +231,7 @@ for (i in 1:ncp){
   }
 }
 
-# PLots arranged
+# Plots arranged
 gridExtra::grid.arrange(grobs = list(plot12,plot13,plot23,plot14,plot24,plot34,
                                        plot15,plot25,plot35,plot45), 
                       nrow=4, ncol=3, widths = unit(c(5, 5, 5), "cm"), 

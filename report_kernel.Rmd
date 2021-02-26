@@ -242,7 +242,7 @@ df_char2 <- df2[which(sapply(df2, is.character) == 1L)]
 numeric_percent <- sapply(df_char2, function(col) check_reading(col))
 
 if (length(numeric_percent[(numeric_percent>0.9)]) != 0L){
-  cat("**Warning: More than 90% of the values of these columns could be treated as numeric. Nevertheless, because of some values or the selected decimal character, the columns must be treated as discrete. Are all the values plausible? Please check the data once more before uploading! Column(s):**", names(numeric_percent[(numeric_percent>0.9)]), fill=TRUE)
+  cat("**Warning: Do you have NAs or other characters in the dataset? More than 90% of the values of these columns could be treated as numeric. Nevertheless, because of some character values or the selected decimal character, the columns cannot be treated as continuos. Column(s):**", names(numeric_percent[(numeric_percent>0.9)]), fill=TRUE)
    cat("\\newline",fill=TRUE) 
 }
 
@@ -270,22 +270,18 @@ if (exists("df_cont")){
 
 
 ```{r, results="asis", dev="cairo_pdf", eval=eval2}
-# Missings  > 5%
+# Missings  > 10%
 complete_rate <- sapply(df_cont, function(col) 1-(sum(is.na(col)) / dim(df)[1])) 
-if (length(which(complete_rate < 0.95)) != 0L){
-  cat("**Error: Execution stop because of limit on missing values. There exist continuous variables with more than 5% missing values. This app allows a max. of 5% missing values per observed variable. Please reconsider your data before using this app. **")
-  miss_var <- names(which(complete_rate < 0.95)) 
+if (length(which(complete_rate < 0.90)) != 0L){
+  cat("**Error: Execution stop because of limit on missing values. There exist continuous variables with more than 10% missing values. This app allows max 10% missing values per observed variable. Please reconsider your data before using this app. **")
+  miss_var <- names(which(complete_rate < 0.90)) 
   eval2 <- FALSE
-  knitr::kable(miss_var, col.names = "Variable(s) with missing values", linesep = '', longtable = T) %>%
+  knitr::kable(miss_var, col.names = "Variable(s) with more than 10% missing values", linesep = '', longtable = T) %>%
     kable_styling(position = "center", full_width = FALSE, latex_options = c("HOLD_position","repeat_header"))
 }
 
 if (nrow(df_cont[complete.cases(df_cont),]) < 10){
   cat("**Error: Minimum 10 complete cases required. **")
-  miss_var <- names(which(complete_rate < 0.95)) 
-  eval2 <- FALSE
-  knitr::kable(miss_var, col.names = "Variable(s) with missing values", linesep = '', longtable = T) %>%
-    kable_styling(position = "center", full_width = FALSE, latex_options = c("HOLD_position","repeat_header"))
 }
 ``` 
 
@@ -322,17 +318,17 @@ tryCatch({
     cat("Normality: The continuous variables are approximately (multivariate) normally distributed. The Principal Components Analysis (PCA) is a suitable method for revealing the dependencies in the dataset. ", fill=TRUE)
     cat("\\newline",fill=TRUE) 
   } else {
-    cat("Warning: We cannot assume an approximately (multivariate) normal distribution of the data. Depending on the distribution of the data and the purpose of the analysis, the Principal Components Analysis (PCA) may not be the optimal dimensionality reduction method. Consider transformations or other dimensionality reduction methods i.e. kernel PCA or Independent Component Analysis (ICA), compare to the results delivered by the PCA and choose the best method. For support contact support@statsomat.com", fill=TRUE)
+    cat("Warning: We cannot assume an approximately (multivariate) normal distribution of the data. Normality is no assumption for PCA. Nevertheless, depending on the distribution of your data, you could also consider transformations or other dimensionality reduction methods i.e. kernel PCA or Independent Component Analysis (ICA). Compare the results and choose the best method. For support contact support@statsomat.com", fill=TRUE)
   }
 })
 
 ```  
 
 ```{r, results="asis", dev="cairo_pdf", eval=eval2}
-# Missings in continuous <=5% 
+# Missings in continuous <= 10% 
 indic_missings <- FALSE
-if (length(which(complete_rate < 1 & complete_rate > 0.95)) != 0L){
-  cat("Missings: There exist variable(s) with <5% missing values. We assume a random missing pattern and apply a missing values imputation technique (Random Forest). ")
+if (length(which(complete_rate < 1 & complete_rate > 0.90)) != 0L){
+  cat("Missings: There exist variable(s) with < 10% missing values. We assume a random missing pattern and apply a missing values imputation technique (Random Forest). ")
   indic_missings <- TRUE
   df <- imputeMissings::impute(df, method="randomForest")
 }
@@ -482,7 +478,7 @@ knitr::kable(pca$var$cos2, digits=3, linesep = '', longtable = T) %>%
 ```
 
 ```{r, results="asis", eval=eval3, dev="cairo_pdf", fig.height=18, fig.width=15}
-cat("\n### Standardized Loadings Plots (Dimenstions 1-2)", fill=TRUE)
+cat("\n### Standardized Loadings Plots (Dimensions 1-2)", fill=TRUE)
 cat("Variables coloured by variance explained (cos2)", fill=TRUE)
 cat("\\newline", fill=TRUE)
 fviz_pca_var(pca, col.var = "cos2", axes = c(1,2), 
