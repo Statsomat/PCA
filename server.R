@@ -159,7 +159,7 @@ function(input, output, session) {
     removeModal()
     
     
-    if (nrow(datainput()) > 2500){
+    if (nrow(datainput()) > 5000){
       showNotification("Maximum sample size exceeded. For more contact: support@statsomat.com", duration=30)
       Sys.sleep(5)
       session$close()
