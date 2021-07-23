@@ -62,7 +62,7 @@ if (length(setdiff(params$vars1,colnames(df))) >0) {
 
 
 
-```{r, eval=eval0}
+```{r, eval=eval0, results="asis"}
 # Data preparation
 
 tryCatch({
@@ -86,24 +86,13 @@ if (length(which(rowSums(rowsums) == dim(df)[2])) != 0L){
 cols_logical <- sapply(df, function(col) is.logical(col))
 df[ ,cols_logical] <- sapply(df[ ,cols_logical], as.character)
 
-# Convert numerical variables with less than 7 unique values to character (missing values omitted)
-col_names_numeric <- sapply(df, function(col) length(unique(na.omit(col))) < 7L & is.numeric(col))
-df[ ,col_names_numeric] <- sapply(df[ ,col_names_numeric], as.character)
+# Convert numerical variables with less than 5 unique values to character (missing values omitted)
+tochar <- sapply(df, function(col) length(unique(na.omit(col))) < 5L & is.numeric(col))
+df[ ,tochar] <- sapply(df[ ,tochar], as.character)
 
-# Extract numerical variables 
+# Extract numerical variables, set as approximately continuous
 df_num <- df[which(sapply(df, is.numeric) == 1L)]
-
-# Extract approximate continuous variables
-if (ncol(df_num)>0){
-
-  rateunique_df <- sapply(df_num, function(col) continuous(col))
-  cols_continuous <- names(which(rateunique_df == TRUE))
-  df_cont <- df_num[,rateunique_df,drop=FALSE] # numeric, continuous resp. assumption fulfilled 
-  
-} else {rateunique_df<-FALSE}
-
-# Extract ordinal columns 
-cols_ordinal <- names(which(rateunique_df == FALSE))
+df_cont <- df_num
 
 # Extract binary character variables 
 cols_binary <- sapply(df, function(col) is.character(col) & length(unique(na.omit(col))) == 2)
@@ -129,7 +118,7 @@ eval <- TRUE
 
 }, error=function(e) {
   
-  stop(safeError("Dataset cannot be prepared. Please check the data for consistency."))
+  cat("Dataset cannot be prepared. The problems could be: Other values besides blanks as missing values, automated encoding detection and conversion failed or other. Try to convert to UTF-8 manually, use only blanks as missing values, use distinct names for the variables and repeat the analysis. ", fill=TRUE)
   
 }
 
@@ -187,26 +176,13 @@ if (exists("df_cont")){
   cat("Variables considered continuous: ", fill=TRUE)
     if (ncol(df_cont)>0){
       cat(ncol(df_cont),fill=TRUE)
-      knitr::kable(cols_continuous, col.names = "Variables considered continuous", linesep = '', longtable = T) %>%
+      knitr::kable(colnames(df_cont), col.names = "Variables considered continuous", linesep = '', longtable = T) %>%
         kable_styling(position = "center", full_width = FALSE, latex_options = c("HOLD_position","repeat_header"))
     } else {
       cat("0", fill=TRUE)
       cat("\\newline",fill=TRUE) 
     }
 }
-
-
-if (exists("df_num")){
-  if (ncol(df_num)>0){
-    if (sum(rateunique_df==FALSE)>0){
-      cat("Numerical variables considered binary or ordinal: ", fill=TRUE)
-      cat(sum(rateunique_df==FALSE),fill=TRUE)
-      knitr::kable(cols_ordinal, col.names = "Numerical variables considered binary or ordinal", linesep = '', longtable = T) %>%
-        kable_styling(position = "center", full_width = FALSE, latex_options = c("HOLD_position","repeat_header"))
-    } 
-  }
-}
-
 
 
 if (exists("cols_binary")){
@@ -253,16 +229,16 @@ if (length(numeric_percent[(numeric_percent>0.9)]) != 0L){
 # Continuous variables at least 3
 if (exists("df_cont")){
    if (ncol(df_cont) == ncol(df) && ncol(df_cont)>=3) {
-    eval2 <- TRUE
+     eval2 <- TRUE
    } else if  (ncol(df_cont) < ncol(df)){
-    cat("**Error: For some selected variables we cannot assume a continuous distribution. The Principal Components Analysis (PCA) may not be a suitable method. You could drop the non-continuous variables or consider more appropriate techniques to deal with mixed data types. For support contact: support@statsomat.com**")
+    cat("**Error: For some selected variables we cannot assume a continuous distribution. The Principal Components Analysis (PCA) may not be the best dimension reduction method. Drop the non-continuous variables and repeat the analysis or consider more appropriate techniques to deal with mixed data types. **")
     cat("\\newline",fill=TRUE) 
    } else if (ncol(df_cont) < 3) {
     cat("**Error: Minimum 3 variables required. **")
     cat("\\newline",fill=TRUE) 
    }
 } else {
-  cat("**Error:  For some selected variables we cannot assume a continuous distribution. The Principal Components Analysis (PCA) may not be a suitable method. You could drop the non-continuous variables or consider more appropriate techniques to deal with mixed data types. For support contact: support@statsomat.com**")
+  cat("**Error: For some selected variables we cannot assume a continuous distribution. The Principal Components Analysis (PCA) may not be the best dimension reduction method. Drop the non-continuous variables and repeat the analysis or consider more appropriate techniques to deal with mixed data types.  **")
   cat("\\newline",fill=TRUE) 
 }
 
@@ -318,7 +294,7 @@ tryCatch({
     cat("Normality: The continuous variables are approximately (multivariate) normally distributed. The Principal Components Analysis (PCA) is a suitable method for revealing the dependencies in the dataset. ", fill=TRUE)
     cat("\\newline",fill=TRUE) 
   } else {
-    cat("Warning: We cannot assume an approximately (multivariate) normal distribution of the data. Normality is no assumption for PCA. Nevertheless, depending on the distribution of your data, you could also consider transformations or other dimensionality reduction methods i.e. kernel PCA or Independent Component Analysis (ICA). Compare the results and choose the best method. For support contact support@statsomat.com", fill=TRUE)
+    cat("Warning: We cannot assume an approximately (multivariate) normal distribution of the data. Depending on the distribution of your data, other dimensionality reduction methods could be (more) suitable to your data. ", fill=TRUE)
   }
 })
 
@@ -358,9 +334,9 @@ tryCatch({
 
 ```{r, results="asis", dev="cairo_pdf", eval=eval2}
 if (scale == TRUE){
-  cat("Scaling: Since we detect statistically significant differences between the variances of the variables, we scale the data before the PCA. For other options contact the support. ", fill=TRUE)
+  cat("Scaling: Since we detect statistically significant differences between the variances of the variables, we scale the data before the PCA. ", fill=TRUE)
 } else {
-  cat("Scaling: Since we do not detect statistically significant differences between the variances of the variables, we do not scale the data before the PCA. For other options contact the support. ", fill=TRUE)
+  cat("Scaling: Since we do not detect statistically significant differences between the variances of the variables, we do not scale the data before the PCA. ", fill=TRUE)
 }
 ```
 
