@@ -27,6 +27,7 @@ library(gridExtra)
 library(imputeMissings)
 library(reshape2)
 library(onewaytests)
+library(fastDummies)
 
 eval0 <- FALSE
 eval <- FALSE
@@ -90,7 +91,7 @@ df[ ,cols_logical] <- sapply(df[ ,cols_logical], as.character)
 tochar <- sapply(df, function(col) length(unique(na.omit(col))) < 5L & is.numeric(col))
 df[ ,tochar] <- sapply(df[ ,tochar], as.character)
 
-# Extract numerical variables, set as approximately continuous
+# Extract numerical variables
 df_num <- df[which(sapply(df, is.numeric) == 1L)]
 df_cont <- df_num
 
@@ -173,10 +174,10 @@ if (exists("col_names_missing")){
 
 
 if (exists("df_cont")){
-  cat("Variables considered continuous: ", fill=TRUE)
+  cat("Variables considered approx. continuous: ", fill=TRUE)
     if (ncol(df_cont)>0){
       cat(ncol(df_cont),fill=TRUE)
-      knitr::kable(colnames(df_cont), col.names = "Variables considered continuous", linesep = '', longtable = T) %>%
+      knitr::kable(colnames(df_cont), col.names = "Numerical variables", linesep = '', longtable = T) %>%
         kable_styling(position = "center", full_width = FALSE, latex_options = c("HOLD_position","repeat_header"))
     } else {
       cat("0", fill=TRUE)
